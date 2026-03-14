@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HyperDeck Studio Controller</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #0f1115;
+            --bg-panel: #1e2128;
+            --bg-card: #272b34;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --border-light: #334155;
+            --accent-blue: #3b82f6;
+            --accent-hover: #2563eb;
+            --color-rec: #ef4444;
+            --color-rec-hover: #dc2626;
+            --color-play: #10b981;
+            --color-play-hover: #059669;
+            --color-stop: #64748b;
+            --color-stop-hover: #475569;
+        }
+
+        * { box-sizing: border-box; }
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: var(--bg-base); 
+            color: var(--text-main); 
+            margin: 0; 
+            padding: 20px; 
+            line-height: 1.5;
+        }
+
+        .app-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        h1 { font-size: 1.5rem; font-weight: 700; margin: 0; color: #fff; letter-spacing: 0.5px; }
+        h2 { font-size: 1rem; font-weight: 600; margin: 0 0 15px 0; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+
+        .local-clock {
+            font-family: 'JetBrains Mono', monospace; font-size: 1.4rem; font-weight: 700; color: #fff;
+            background: rgba(0,0,0,0.4); padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border-light);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); letter-spacing: 2px;
+        }
+
+        .dashboard-header { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
+        .panel { 
+            background: var(--bg-panel); padding: 20px; border-radius: 12px; border: 1px solid var(--border-light);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+        .panel-global { flex: 1; min-width: 300px; border-top: 4px solid var(--accent-blue); }
+        .panel-add { flex: 2; min-width: 400px; }
+
+        input[type="text"], select { 
+            padding: 10px 12px; font-size: 0.95rem; background: var(--bg-base); border: 1px solid var(--border-light); 
+            color: white; border-radius: 6px; outline: none; transition: border-color 0.2s; font-family: 'Inter', sans-serif;
+        }
+        input[type="text"]:focus, select:focus { border-color: var(--accent-blue); }
+        
+        .form-row { display: flex; gap: 10px; margin-bottom: 15px; align-items: center; }
+        .form-row:last-child { margin-bottom: 0; }
+
+        button { 
+            font-family: 'Inter', sans-serif; font-size: 0.95rem; font-weight: 600; padding: 10px 16px; 
+            cursor: pointer; border: none; border-radius: 6px; color: white; transition: all 0.2s ease;
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+        }
+        button:active { transform: scale(0.96); }
+        
+        .btn-primary { background: var(--accent-blue); }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-play { background: var(--color-play); }
+        .btn-play:hover { background: var(--color-play-hover); }
+        .btn-stop { background: var(--color-stop); }
+        .btn-stop:hover { background: var(--color-stop-hover); }
+        .btn-rec { background: var(--color-rec); }
+        .btn-rec:hover { background: var(--color-rec-hover); box-shadow: 0 0 10px rgba(239, 68, 68, 0.5); }
+        .btn-remove { background: transparent; color: var(--text-muted); padding: 8px; }
+        .btn-remove:hover { color: var(--color-rec); background: rgba(239, 68, 68, 0.1); }
+        
+        /* インポート/エクスポート用ボタン */
+        .btn-secondary { background: var(--bg-card); border: 1px solid var(--border-light); color: var(--text-main); }
+        .btn-secondary:hover { background: var(--border-light); }
+
+        .devices-grid { display: flex; flex-direction: column; gap: 12px; }
+        .device-card { 
+            display: flex; flex-direction: row; align-items: center; background: var(--bg-card); border: 1px solid var(--border-light); 
+            padding: 16px 20px; border-radius: 8px; transition: border-color 0.2s;
+        }
+        .device-card:hover { border-color: #475569; }
+
+        .device-info { width: 180px; flex-shrink: 0; display: flex; flex-direction: column; justify-content: center; }
+        .device-name { font-size: 1.15rem; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+        .device-ip { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; font-family: 'JetBrains Mono', monospace;}
+        
+        .status-wrapper { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 0.8rem; color: var(--text-muted); }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #fbbf24; }
+        .status-dot.connected { background: var(--color-play); box-shadow: 0 0 8px rgba(16, 185, 129, 0.4); }
+        .status-dot.error { background: var(--color-rec); box-shadow: 0 0 8px rgba(239, 68, 68, 0.4); }
+
+        .device-meta { width: 220px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
+        .meta-badge { 
+            font-size: 0.75rem; font-weight: 600; background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 4px; 
+            color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border: 1px solid var(--border-light);
+            display: flex; justify-content: space-between;
+        }
+        .meta-badge span { color: var(--text-muted); font-weight: 400; margin-right: 5px; }
+        
+        .tc-display { 
+            font-family: 'JetBrains Mono', monospace; font-size: 2rem; font-weight: 700; background: #000; color: #fff; 
+            padding: 10px 20px; border-radius: 6px;  text-align: center; margin: 0 auto; flex-shrink: 0; 
+            border: 2px solid #222; transition: all 0.2s; box-shadow: inset 0 2px 10px rgba(0,0,0,0.8);
+        }
+        .state-record { color: var(--color-rec); border-color: rgba(239, 68, 68, 0.5); text-shadow: 0 0 10px rgba(239, 68, 68, 0.5); }
+        .state-play { color: var(--color-play); border-color: rgba(16, 185, 129, 0.5); text-shadow: 0 0 10px rgba(16, 185, 129, 0.5); }
+        
+        .device-controls { display: flex; gap: 8px; flex-shrink: 0; align-items: center; }
+        .device-controls button { padding: 10px 14px; }
+    </style>
+</head>
+<body>
+
+    <div class="app-header">
+        <h1>HyperDeck Studio Controller</h1>
+        <div class="local-clock" id="localClock">00:00:00</div>
+    </div>
+
+    <div class="dashboard-header">
+        <div class="panel panel-global">
+            <h2>Global Control</h2>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-play" onclick="sendGlobal('play')">▶ PLAY ALL</button>
+                <button class="btn-stop" onclick="sendGlobal('stop')">■ STOP ALL</button>
+                <button class="btn-rec" onclick="sendGlobal('record')">● REC ALL</button>
+            </div>
+        </div>
+
+        <div class="panel panel-add">
+            <h2>Device Management</h2>
+            <div class="form-row">
+                <select id="discoverySelect" onchange="onSelectDiscovered()" style="flex: 1;">
+                    <option value="">-- Auto Discovery (Searching...) --</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <input type="text" id="nameInput" placeholder="Name (ex: CAM 1)" style="width: 150px;">
+                <input type="text" id="ipInput" placeholder="IP Address" style="width: 150px;">
+                <button class="btn-primary" onclick="addDevice()">＋ Add Device</button>
+            </div>
+            
+            <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border-light); display: flex; gap: 10px;">
+                <button class="btn-secondary" onclick="requestExport()">Download Config</button>
+                <button class="btn-secondary" onclick="document.getElementById('importFile').click()">Upload Config</button>
+                <input type="file" id="importFile" accept=".json" style="display: none;" onchange="handleImport(event)">
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h2>Connected Decks</h2>
+        <div class="devices-grid" id="devicesContainer"></div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        function updateClock() {
+            const now = new Date();
+            const h = String(now.getHours()).padStart(2, '0');
+            const m = String(now.getMinutes()).padStart(2, '0');
+            const s = String(now.getSeconds()).padStart(2, '0');
+            const clockEl = document.getElementById('localClock');
+            if (clockEl) clockEl.innerText = `${h}:${m}:${s}`;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        const socket = io();
+        const container = document.getElementById('devicesContainer');
+
+        window.slotData = {};   
+        window.activeSlot = {}; 
+
+        function onSelectDiscovered() {
+            const select = document.getElementById('discoverySelect');
+            const selectedOption = select.options[select.selectedIndex];
+            if (selectedOption.value) {
+                document.getElementById('ipInput').value = selectedOption.value;
+                document.getElementById('nameInput').value = selectedOption.getAttribute('data-name');
+            }
+        }
+
+        function addDevice() {
+            const ip = document.getElementById('ipInput').value.trim();
+            let name = document.getElementById('nameInput').value.trim();
+            if (ip) {
+                if (!name) name = ip; 
+                socket.emit('add_device', { ip, name });
+                document.getElementById('ipInput').value = '';
+                document.getElementById('nameInput').value = '';
+                document.getElementById('discoverySelect').value = '';
+            }
+        }
+
+        function sendGlobal(cmd) { socket.emit('global_command', cmd); }
+        function sendSingle(ip, cmd) { socket.emit('single_command', { ip, cmd }); }
+        
+        function removeDevice(ip) {
+            socket.emit('remove_device', ip);
+            const card = document.getElementById(`device-${ip.replace(/\./g, '-')}`);
+            if (card) card.remove();
+        }
+
+        // --- 【追加】設定ファイルのエクスポート処理 ---
+        function requestExport() {
+            socket.emit('request_export');
+        }
+
+        socket.on('export_data', (data) => {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "hyperdeck_config.json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        });
+
+        // --- 【追加】設定ファイルのインポート処理 ---
+        function handleImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (Array.isArray(parsed)) {
+                        if (confirm('現在のデバイスリストを破棄し、選択した構成ファイルで上書きしますか？')) {
+                            socket.emit('import_devices', parsed);
+                        }
+                    } else {
+                        alert('無効な設定ファイルです。');
+                    }
+                } catch (err) {
+                    alert('ファイルの読み込みに失敗しました。');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // ファイル選択状態をリセット
+        }
+
+        // --- 【追加】インポート完了時に画面を再構築 ---
+        socket.on('config_imported', (devices) => {
+            container.innerHTML = ''; // 現在のカードをすべて消去
+            window.slotData = {};   
+            window.activeSlot = {};
+            devices.forEach(data => renderDeviceCard(data));
+        });
+
+        function renderDeviceCard({ ip, name }) {
+            const safeIpId = ip.replace(/\./g, '-');
+            if (document.getElementById(`device-${safeIpId}`)) return;
+
+            window.slotData[ip] = {}; 
+            window.activeSlot[ip] = null;
+
+            const div = document.createElement('div');
+            div.className = 'device-card';
+            div.id = `device-${safeIpId}`;
+
+            div.innerHTML = `
+                <div class="device-info" title="${name}">
+                    <div class="device-name">${name}</div>
+                    <div class="device-ip">${ip}</div>
+                    <div class="status-wrapper">
+                        <div class="status-dot" id="dot-${safeIpId}"></div>
+                        <span id="status-${safeIpId}">Connecting...</span>
+                    </div>
+                </div>
+                
+                <div class="device-meta">
+                    <div class="meta-badge"><span>Codec</span> <strong id="codec-${safeIpId}">--</strong></div>
+                    <div class="meta-badge"><span>Slot</span> <strong id="storage-${safeIpId}">Checking...</strong></div>
+                </div>
+                
+                <div class="tc-display" id="tc-${safeIpId}">--:--:--:--</div>
+                
+                <div class="device-controls">
+                    <button class="btn-play" onclick="sendSingle('${ip}', 'play')">▶ Play</button>
+                    <button class="btn-stop" onclick="sendSingle('${ip}', 'stop')">■ Stop</button>
+                    <button class="btn-rec" onclick="sendSingle('${ip}', 'record')">● Rec</button>
+                    <button class="btn-remove" title="Remove Device" onclick="removeDevice('${ip}')">✖</button>
+                </div>
+            `;
+            container.appendChild(div);
+        }
+
+        function updateStorageDisplay(ip) {
+            const el = document.getElementById(`storage-${ip.replace(/\./g, '-')}`);
+            if (el && window.activeSlot[ip]) {
+                const currentSlot = window.activeSlot[ip];
+                const currentTime = window.slotData[ip][currentSlot] || '--';
+                
+                el.innerText = `[${currentSlot}] ${currentTime}`;
+                if (currentTime === 'No Media') {
+                    el.style.color = 'var(--color-rec)';
+                } else {
+                    el.style.color = '#fff';
+                }
+            }
+        }
+
+        socket.on('device_added', (deviceData) => renderDeviceCard(deviceData));
+        socket.on('init_devices', (devices) => devices.forEach(data => renderDeviceCard(data)));
+
+        socket.on('discovered_devices', (devices) => {
+            const select = document.getElementById('discoverySelect');
+            const currentVal = select.value;
+            const countText = devices.length > 0 ? `Found ${devices.length} devices` : 'Searching...';
+            select.innerHTML = `<option value="">-- Network Discovery (${countText}) --</option>`;
+            
+            devices.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d.ip;
+                opt.setAttribute('data-name', d.name);
+                opt.innerText = `${d.name} (${d.ip})`;
+                select.appendChild(opt);
+            });
+            if (currentVal) select.value = currentVal;
+        });
+
+        socket.on('device_status', ({ ip, status, isError }) => {
+            const safeIpId = ip.replace(/\./g, '-');
+            const textEl = document.getElementById(`status-${safeIpId}`);
+            const dotEl = document.getElementById(`dot-${safeIpId}`);
+            
+            if (textEl && dotEl) {
+                textEl.innerText = status;
+                dotEl.className = 'status-dot ' + (status === 'Connected' ? 'connected' : (isError ? 'error' : ''));
+            }
+        });
+
+        socket.on('device_tc', ({ ip, tc }) => {
+            const el = document.getElementById(`tc-${ip.replace(/\./g, '-')}`);
+            if (el) el.innerText = tc;
+        });
+
+        socket.on('device_state', ({ ip, state }) => {
+            const tcEl = document.getElementById(`tc-${ip.replace(/\./g, '-')}`);
+            if (tcEl) {
+                tcEl.classList.remove('state-record', 'state-play');
+                if (state === 'record') tcEl.classList.add('state-record');
+                if (state === 'play') tcEl.classList.add('state-play');
+            }
+        });
+
+        socket.on('device_codec', ({ ip, codec }) => {
+            const el = document.getElementById(`codec-${ip.replace(/\./g, '-')}`);
+            if (el) el.innerText = codec;
+        });
+
+        socket.on('device_active_slot', ({ ip, activeSlot }) => {
+            if (window.activeSlot[ip] !== activeSlot) {
+                window.activeSlot[ip] = activeSlot;
+                updateStorageDisplay(ip); 
+            }
+        });
+
+        socket.on('device_storage', ({ ip, slot, time }) => {
+            window.slotData[ip][slot] = time;
+            if (window.activeSlot[ip] === slot) {
+                updateStorageDisplay(ip); 
+            }
+        });
+
+        socket.on('error_msg', (msg) => alert(msg));
+    </script>
+</body>
+</html>
