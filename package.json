@@ -1,6 +1,6 @@
 {
   "name": "hyperdeck-controller",
-  "version": "1.0.0",
+  "version": "0.3.0",
   "description": "HyperDeck Studio Controller",
   "main": "main.js",  
   "scripts": {
@@ -19,6 +19,7 @@
   "build": {
     "appId": "com.hyperdeck.controller",
     "productName": "HyperDeck Controller",
+    
     "directories": {
       "output": "dist"
     },
@@ -29,6 +30,6 @@
       "server.js",
       "main.js",
       "public/**/*"
-    ]
+    ]  
   }
 }
